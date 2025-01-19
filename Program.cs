@@ -1,9 +1,31 @@
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
+using RateLimiter.Models;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+builder.Services.Configure<MyRateLimitOptions>(
+builder.Configuration.GetSection(MyRateLimitOptions.MyRateLimit)
+);
+
+var myOptions = new MyRateLimitOptions();
+builder.Configuration.GetSection(MyRateLimitOptions.MyRateLimit).Bind(myOptions);
+var fixedPolicy = "fixed";
+
+builder.Services.AddRateLimiter(_ => _
+    .AddFixedWindowLimiter(policyName: fixedPolicy, options =>
+    {
+        options.PermitLimit = myOptions.PermitLimit;
+        options.Window = TimeSpan.FromSeconds(myOptions.Window);
+        options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        options.QueueLimit = myOptions.QueueLimit;
+    }));
 
 var app = builder.Build();
+    
+app.UseRateLimiter();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
